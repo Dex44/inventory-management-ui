@@ -1,25 +1,92 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+// src/App.js
+import React from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import LoginPage from "./pages/LoginPage";
+import DashboardPage from "./pages/DashboardPage";
+import UserPage from "./pages/UserPage";
+import ProductsPage from "./pages/ProductsPage";
+import NotFoundPage from "./pages/NotFoundPage";
+import Layout from "./components/Layout";
+import UserFormPage from "./pages/UserFormPage";
+import ProductFormPage from "./pages/ProductFormPage";
+import InvoicePage from "./pages/InvoicePage";
+
+const PrivateRoute = ({ children }) => {
+  const token = localStorage.getItem("jwtToken");
+  return token ? children : <Navigate to="/" />;
+};
+
+const AdminRoute = ({ children }) => {
+  const token = localStorage.getItem("jwtToken");
+  const userData = JSON.parse(localStorage.getItem("userData"));
+
+  if (!token) {
+    return <Navigate to="/" />; // Redirect to login if not authenticated
+  }
+
+  if (userData?.Role?.role_name !== "Admin") {
+    return <Navigate to="/dashboard" />; // Redirect non-admins to dashboard
+  }
+
+  return children;
+};
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
+    <Router>
+      <Routes>
+        {/* Public Route */}
+        <Route path="/" element={<LoginPage />} />
+
+        {/* Private Routes with Layout */}
+        <Route
+          path="/"
+          element={
+            <PrivateRoute>
+              <Layout />
+            </PrivateRoute>
+          }
         >
-          Learn React
-        </a>
-      </header>
-    </div>
+          <Route path="dashboard" element={<DashboardPage />} />
+          <Route
+            path="users"
+            element={
+              <AdminRoute>
+                <UserPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/users/create"
+            element={
+              <AdminRoute>
+                <UserFormPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/users/edit/:id"
+            element={
+              <AdminRoute>
+                <UserFormPage />
+              </AdminRoute>
+            }
+          />
+          <Route path="products" element={<ProductsPage />} />
+          <Route path="/products/create" element={<ProductFormPage />} />
+          <Route path="/products/edit/:id" element={<ProductFormPage />} />
+          <Route path="/invoice" element={<InvoicePage />} />
+        </Route>
+
+        {/* 404 Page */}
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </Router>
   );
 }
 
