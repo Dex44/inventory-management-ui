@@ -15,6 +15,8 @@ import Layout from "./components/Layout";
 import UserFormPage from "./pages/UserFormPage";
 import ProductFormPage from "./pages/ProductFormPage";
 import InvoicePage from "./pages/InvoicePage";
+import ClientPage from "./pages/ClientPage";
+import CreateInvoice from "./pages/CreateInvoice";
 
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem("jwtToken");
@@ -78,9 +80,11 @@ function App() {
             }
           />
           <Route path="products" element={<ProductsPage />} />
+          <Route path="clients" element={<ClientPage />} />
           <Route path="/products/create" element={<ProductFormPage />} />
           <Route path="/products/edit/:id" element={<ProductFormPage />} />
           <Route path="/invoice" element={<InvoicePage />} />
+          <Route path="/invoice/create" element={<CreateInvoice />} />
         </Route>
 
         {/* 404 Page */}

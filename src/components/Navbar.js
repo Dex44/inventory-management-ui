@@ -42,6 +42,12 @@ const Navbar = () => {
               </Link>
             )}
             <Link
+              to="/clients"
+              className="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700"
+            >
+              Clients
+            </Link>
+            <Link
               to="/invoice"
               className="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700"
             >
@@ -91,6 +97,13 @@ const Navbar = () => {
                 Users
               </Link>
             )}
+            <Link
+              to="/clients"
+              className="block px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Clients
+            </Link>
             <Link
               to="/invoice"
               className="block px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700"
