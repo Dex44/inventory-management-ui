@@ -12,7 +12,10 @@ const ClientPage = () => {
   // Fetch clients from API
   const getClients = () => {
     axiosInstance
-      .get("/list-users/1/10")
+      .post("/list-clients", {
+        page: 1,
+        limit: 100,
+      })
       .then((response) => {
         setClients(response.data.data);
       })
@@ -30,7 +33,7 @@ const ClientPage = () => {
   // Handle delete client
   const handleDelete = async () => {
     try {
-      await axiosInstance.post("/delete-client", { client_id: deleteClientId });
+      await axiosInstance.post("/delete-client", { id: deleteClientId });
       setShowDeletePrompt(false);
       getClients();
     } catch (error) {
@@ -56,29 +59,31 @@ const ClientPage = () => {
             <thead>
               <tr className="bg-gray-100 border-b">
                 <th className="px-4 py-2 text-left">ID</th>
-                <th className="px-4 py-2 text-left">Clientname</th>
+                <th className="px-4 py-2 text-left">Name</th>
                 <th className="px-4 py-2 text-left">Email</th>
-                <th className="px-4 py-2 text-left">Role</th>
-                <th className="px-4 py-2 text-left">Actions</th>
+                <th className="px-4 py-2 text-left">Mobile</th>
+                <th className="px-4 py-2 text-left">Address</th>
+                <th className="px-4 py-2 text-left">Action</th>
               </tr>
             </thead>
             <tbody>
               {clients.map((client) => (
                 <tr key={client.id} className="border-b">
-                  <td className="px-4 py-2">{client.client_id}</td>
-                  <td className="px-4 py-2">{client.clientname}</td>
-                  <td className="px-4 py-2">{client.email}</td>
-                  <td className="px-4 py-2">{client.Role.role_name}</td>
+                  <td className="px-4 py-2">{client?.id}</td>
+                  <td className="px-4 py-2">{client?.name}</td>
+                  <td className="px-4 py-2">{client?.email}</td>
+                  <td className="px-4 py-2">{client?.mobile}</td>
+                  <td className="px-4 py-2">{client?.address}</td>
                   <td className="px-4 py-2">
                     <Link
-                      to={`/clients/edit/${client.client_id}`}
+                      to={`/clients/edit/${client?.id}`}
                       className="text-blue-600"
                     >
                       Edit
                     </Link>
                     <button
                       onClick={() => {
-                        setDeleteClientId(client.client_id);
+                        setDeleteClientId(client?.id);
                         setShowDeletePrompt(true);
                       }}
                       className="text-red-600 ml-4"
@@ -101,11 +106,17 @@ const ClientPage = () => {
             </h2>
             <p className="mb-4">
               Clientname:{" "}
-              {clients.find((client) => client.client_id === deleteClientId)?.clientname}
+              {
+                clients.find((client) => client.id === deleteClientId)
+                  ?.name
+              }
             </p>
             <p className="mb-4">
               Email:{" "}
-              {clients.find((client) => client.client_id === deleteClientId)?.email}
+              {
+                clients.find((client) => client.id === deleteClientId)
+                  ?.email
+              }
             </p>
             <div>
               <button

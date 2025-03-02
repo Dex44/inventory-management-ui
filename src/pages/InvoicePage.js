@@ -2,17 +2,21 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import axiosInstance from "../utils/axiosInstance";
+import FormatDate from "../utils/formatDate";
 
 const InvoicePage = () => {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [deleteInvoiceId, setDeleteInvoiceId] = useState(null);
   const [showDeletePrompt, setShowDeletePrompt] = useState(false);
 
   // Fetch invoices from API
   const getInvoices = () => {
     axiosInstance
-      .get("/list-invoices/1/10")
+      .post("/list-invoice", {
+        // client_id: 1,
+        page: 1,
+        limit: 100,
+      })
       .then((response) => {
         setInvoices(response.data.data);
       })
@@ -26,17 +30,6 @@ const InvoicePage = () => {
   useEffect(() => {
     getInvoices();
   }, []);
-
-  // Handle delete invoice
-  const handleDelete = async () => {
-    try {
-      await axiosInstance.post("/delete-invoice", { invoice_id: deleteInvoiceId });
-      setShowDeletePrompt(false);
-      getInvoices();
-    } catch (error) {
-      console.error("Error deleting invoice:", error);
-    }
-  };
 
   return (
     <div>
@@ -56,72 +49,57 @@ const InvoicePage = () => {
             <thead>
               <tr className="bg-gray-100 border-b">
                 <th className="px-4 py-2 text-left">ID</th>
-                <th className="px-4 py-2 text-left">Invoicename</th>
-                <th className="px-4 py-2 text-left">Email</th>
-                <th className="px-4 py-2 text-left">Role</th>
-                <th className="px-4 py-2 text-left">Actions</th>
+                <th className="px-4 py-2 text-left">Client</th>
+                <th className="px-4 py-2 text-left">Amount</th>
+                <th className="px-4 py-2 text-left">Status</th>
+                <th className="px-4 py-2 text-left">Created By</th>
+                <th className="px-4 py-2 text-left">Approved By</th>
+                <th className="px-4 py-2 text-left">Date</th>
+                <th className="px-4 py-2 text-left">Action</th>
               </tr>
             </thead>
             <tbody>
-              {invoices.map((invoice) => (
-                <tr key={invoice.id} className="border-b">
-                  <td className="px-4 py-2">{invoice.invoice_id}</td>
-                  <td className="px-4 py-2">{invoice.invoicename}</td>
-                  <td className="px-4 py-2">{invoice.email}</td>
-                  <td className="px-4 py-2">{invoice.Role.role_name}</td>
-                  <td className="px-4 py-2">
-                    <Link
-                      to={`/invoices/edit/${invoice.invoice_id}`}
-                      className="text-blue-600"
-                    >
-                      Edit
-                    </Link>
-                    <button
-                      onClick={() => {
-                        setDeleteInvoiceId(invoice.invoice_id);
-                        setShowDeletePrompt(true);
-                      }}
-                      className="text-red-600 ml-4"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {invoices.length > 0 &&
+                invoices.map((invoice) => (
+                  <tr key={invoice?.id} className="border-b">
+                    <td className="px-4 py-2">{invoice?.id}</td>
+                    <td className="px-4 py-2">{invoice?.client.name}</td>
+                    <td className="px-4 py-2">{invoice?.amount}</td>
+                    <td className="px-4 py-2">
+                      {invoice?.approver ? "Approved" : "Pending"}
+                    </td>
+                    <td className="px-4 py-2">{invoice?.creator?.username}</td>
+                    <td className="px-4 py-2">{invoice?.approver?.username}</td>
+                    <td className="px-4 py-2">
+                      {FormatDate(invoice?.updated_at)}
+                    </td>
+                    <td className="px-4 py-2">
+                      {invoice?.approver ? (
+                        <></>
+                      ) : (
+                        <>
+                          <Link
+                            // to={`/products/edit/${product.id}`}
+                            className="text-blue-600"
+                          >
+                            Edit
+                          </Link>
+                          <button
+                            // onClick={() => {
+                            //   setDeleteProductId(product.id);
+                            //   setShowDeletePrompt(true);
+                            // }}
+                            className="text-green-600 ml-4"
+                          >
+                            Approve
+                          </button>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                ))}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {showDeletePrompt && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-6 rounded">
-            <h2 className="text-xl font-bold mb-4">
-              Are you sure you want to delete this invoice?
-            </h2>
-            <p className="mb-4">
-              Invoicename:{" "}
-              {invoices.find((invoice) => invoice.invoice_id === deleteInvoiceId)?.invoicename}
-            </p>
-            <p className="mb-4">
-              Email:{" "}
-              {invoices.find((invoice) => invoice.invoice_id === deleteInvoiceId)?.email}
-            </p>
-            <div>
-              <button
-                onClick={handleDelete}
-                className="bg-red-600 text-white px-4 py-2 rounded mr-2"
-              >
-                Yes, Delete
-              </button>
-              <button
-                onClick={() => setShowDeletePrompt(false)}
-                className="bg-gray-600 text-white px-4 py-2 rounded"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>

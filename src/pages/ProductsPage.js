@@ -17,7 +17,10 @@ const ProductsPage = () => {
   // Fetch products from API
   const getProducts = () => {
     axiosInstance
-      .get("/list-products/1/10")
+      .post("/list-products", {
+        page: 1,
+        limit: 100,
+      })
       .then((response) => {
         const data = response.data.data?.products.map((value) => {
           return {
@@ -106,25 +109,7 @@ const ProductsPage = () => {
                     </p>
                   </div>
                   <p className="text-xs">Quantity: {product.quantity}</p>
-                  <div className="flex justify-between mt-2">
-                    <Link
-                      to={`/products/edit/${product.id}`}
-                      className="text-blue-600 flex items-center"
-                    >
-                      {/* <button className="text-blue-600 flex items-center"> */}
-                      <FaEdit className="mr-1" /> Edit
-                      {/* </button> */}
-                    </Link>
-                    <button
-                      className="text-red-600 flex items-center"
-                      onClick={() => {
-                        setDeleteProductId(product.id);
-                        setShowDeletePrompt(true);
-                      }}
-                    >
-                      <FaTrash className="mr-1" /> Delete
-                    </button>
-                  </div>
+
                 </div>
               </div>
             ))}
@@ -221,3 +206,25 @@ const ProductsPage = () => {
 };
 
 export default ProductsPage;
+
+
+
+// <div className="flex justify-between mt-2">
+// <Link
+//   to={`/products/edit/${product.id}`}
+//   className="text-blue-600 flex items-center"
+// >
+//   {/* <button className="text-blue-600 flex items-center"> */}
+//   <FaEdit className="mr-1" /> Edit
+//   {/* </button> */}
+// </Link>
+// <button
+//   className="text-red-600 flex items-center"
+//   onClick={() => {
+//     setDeleteProductId(product.id);
+//     setShowDeletePrompt(true);
+//   }}
+// >
+//   <FaTrash className="mr-1" /> Delete
+// </button>
+// </div>

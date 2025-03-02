@@ -5,34 +5,42 @@ import { Link } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Pagination } from "swiper/modules";
 import "swiper/css";
-import 'swiper/css/pagination';
+import "swiper/css/pagination";
 import { FaEdit, FaTrash, FaPlus, FaRupeeSign } from "react-icons/fa";
+import SearchBar from "../components/SearchBar";
 
 const DashboardPage = () => {
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [deleteproductId, setDeleteProductId] = useState(null);
   const [showDeletePrompt, setShowDeletePrompt] = useState(false);
+  const [role, setRole] = useState(null);
 
   // Fetch products from API
-  const getProducts = () => {
+  const getProducts = (search) => {
+    const params = {
+      product_name: search,
+      page: 1,
+      limit: 100,
+    };
+    if (search) {
+      params.product_name = search;
+    } else {
+      delete params.product_name;
+    }
+    
     axiosInstance
-      .get("/list-products/1/10")
+      .post("/list-products", params)
       .then((response) => {
         const data = response.data.data?.products.map((value) => {
           return {
-            id: value?.dataValues?.product_id || "",
-            name: value?.dataValues?.product_name || "",
-            created_at: value?.dataValues?.created_at || "",
-            price: value?.dataValues?.price || "",
-            description: value?.dataValues?.description || "",
-            quantity: value?.dataValues?.quantity || "",
-            images: value?.images.map((img) => {
-              return {
-                id: img?.id,
-                image_url: img?.image_url,
-              };
-            }),
+            id: value?.product_id || "",
+            name: value?.product_name || "",
+            created_at: value?.created_at || "",
+            price: value?.price || "",
+            description: value?.description || "",
+            quantity: value?.quantity || "",
+            image: value?.image
           };
         });
         setProducts(data);
@@ -45,6 +53,8 @@ const DashboardPage = () => {
       });
   };
   useEffect(() => {
+    const userData = JSON.parse(localStorage.getItem("userData"));
+    setRole(userData.Role.role_name);
     getProducts();
   }, []);
 
@@ -60,123 +70,135 @@ const DashboardPage = () => {
       console.error("Error deleting product:", error);
     }
   };
-
+  const handleSearch = (searchTerm) => {
+    getProducts(searchTerm);
+  };
   return (
     <div>
       {loading ? (
         <p>Loading products...</p>
       ) : (
-        <div className="container mx-auto p-4">
+        <div>
           <div className="flex justify-between mt-2">
             <h1 className="text-2xl font-bold mb-4">Products</h1>
-            <Link
-              to="/products/create"
-              className="bg-blue-600 text-white p-2 rounded mb-4 inline-block items-center flex gap-1"
-            >
-              <FaPlus /> Add Product
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {products.map((product) => (
-              <div
-                key={product.id}
-                className="border rounded-lg shadow-md bg-white"
+            <div className="flex">
+              <SearchBar onSearch={handleSearch} />
+              <Link
+                to="/products/create"
+                className="bg-blue-600 text-white p-2 rounded mb-4 inline-block items-center flex gap-1"
               >
-                <Swiper
-                  autoplay={{
-                    delay: 2500,
-                    disableOnInteraction: true,
-                  }}
-                  pagination={{
-                    clickable: true,
-                    dynamicBullets: true,
-                  }}
-                  modules={[Autoplay, Pagination]}
-                  className="w-full h-56"
-                >
-                  {product.images.map((img, index) => (
-                    <SwiperSlide key={index}>
-                      <img
-                        src={img.image_url}
-                        alt={product.name}
-                        className="w-full h-full object-cover rounded-lg"
-                      />
-                    </SwiperSlide>
-                  ))}
-                </Swiper>
-                <div className="p-2">
-                  <div className="flex justify-between mt-2">
-                    <h2 className="text-md">{product.name}</h2>
-                    {/* <p className="text-sm text-gray-600">Color: {product.color}</p> */}
-                    <p className="text-sm font-semibold flex items-center">
-                      <FaRupeeSign /> {product.price}
-                    </p>
-                  </div>
-                  <p className="text-xs">Quantity: {product.quantity}</p>
-                  <div className="flex justify-between mt-2">
-                    <Link
-                      to={`/products/edit/${product.id}`}
-                      className="text-blue-600 flex items-center"
-                    >
-                      {/* <button className="text-blue-600 flex items-center"> */}
-                      <FaEdit className="mr-1" /> Edit
-                      {/* </button> */}
-                    </Link>
-                    <button
-                      className="text-red-600 flex items-center"
-                      onClick={() => {
-                        setDeleteProductId(product.id);
-                        setShowDeletePrompt(true);
-                      }}
-                    >
-                      <FaTrash className="mr-1" /> Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+                <FaPlus /> Add Product
+              </Link>
+            </div>
           </div>
+          {role == "Admin" ? (
+            <div className="overflow-x-auto mt-4">
+              <table className="min-w-full bg-white border border-gray-300">
+                <thead>
+                  <tr className="bg-gray-100 border-b">
+                    <th className="px-4 py-2 text-left">ID</th>
+                    <th className="px-4 py-2 text-left">Product Name</th>
+                    <th className="px-4 py-2 text-left">Price</th>
+                    <th className="px-4 py-2 text-left">Quantity</th>
+                    <th className="px-4 py-2 text-left">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {products.length > 0 &&
+                    products.map((product) => (
+                      <tr key={product.id} className="border-b">
+                        <td className="px-4 py-2">{product.id}</td>
+                        <td className="px-4 py-2">{product.name}</td>
+                        <td className="px-4 py-2">{product.price}</td>
+                        <td className="px-4 py-2">{product.quantity}</td>
+                        <td className="px-4 py-2">
+                          <Link
+                            to={`/products/edit/${product.id}`}
+                            className="text-blue-600"
+                          >
+                            Edit
+                          </Link>
+                          <button
+                            onClick={() => {
+                              setDeleteProductId(product.id);
+                              setShowDeletePrompt(true);
+                            }}
+                            className="text-red-600 ml-4"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="container mx-auto p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {products.length > 0 &&
+                  products.map((product) => (
+                    <div
+                      key={product.id}
+                      className="border rounded-lg shadow-md bg-white"
+                    >
+                      <Swiper
+                        autoplay={{
+                          delay: 2500,
+                          disableOnInteraction: true,
+                        }}
+                        pagination={{
+                          clickable: true,
+                          dynamicBullets: true,
+                        }}
+                        modules={[Autoplay, Pagination]}
+                        className="w-full h-56"
+                      >
+                        {/* {product.images.map((img, index) => ( */}
+                          <SwiperSlide key={product.id}>
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="w-full h-full object-cover rounded-lg"
+                            />
+                          </SwiperSlide>
+                        {/* ))} */}
+                      </Swiper>
+                      <div className="p-2">
+                        <div className="flex justify-between mt-2">
+                          <h2 className="text-md">{product.name}</h2>
+                          {/* <p className="text-sm text-gray-600">Color: {product.color}</p> */}
+                          <p className="text-sm font-semibold flex items-center">
+                            <FaRupeeSign /> {product.price}
+                          </p>
+                        </div>
+                        <p className="text-xs">Quantity: {product.quantity}</p>
+                        <div className="flex justify-between mt-2">
+                          <Link
+                            to={`/products/edit/${product.id}`}
+                            className="text-blue-600 flex items-center"
+                          >
+                            {/* <button className="text-blue-600 flex items-center"> */}
+                            <FaEdit className="mr-1" /> Edit
+                            {/* </button> */}
+                          </Link>
+                          <button
+                            className="text-red-600 flex items-center"
+                            onClick={() => {
+                              setDeleteProductId(product.id);
+                              setShowDeletePrompt(true);
+                            }}
+                          >
+                            <FaTrash className="mr-1" /> Delete
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
-        // <div className="overflow-x-auto mt-4">
-        //   <table className="min-w-full bg-white border border-gray-300">
-        //     <thead>
-        //       <tr className="bg-gray-100 border-b">
-        //         <th className="px-4 py-2 text-left">ID</th>
-        //         <th className="px-4 py-2 text-left">Product Name</th>
-        //         <th className="px-4 py-2 text-left">Price</th>
-        //         <th className="px-4 py-2 text-left">Quantity</th>
-        //         <th className="px-4 py-2 text-left">Actions</th>
-        //       </tr>
-        //     </thead>
-        //     <tbody>
-        //       {products.length > 0 && products.map((product) => (
-        //         <tr key={product.id} className="border-b">
-        //           <td className="px-4 py-2">{product.product_id}</td>
-        //           <td className="px-4 py-2">{product.product_name}</td>
-        //           <td className="px-4 py-2">{product.price}</td>
-        //           <td className="px-4 py-2">{product.quantity}</td>
-        //           <td className="px-4 py-2">
-        //             <Link
-        //               to={`/products/edit/${product.product_id}`}
-        //               className="text-blue-600"
-        //             >
-        //               Edit
-        //             </Link>
-        //             <button
-        //               onClick={() => {
-        //                 setDeleteProductId(product.product_id);
-        //                 setShowDeletePrompt(true);
-        //               }}
-        //               className="text-red-600 ml-4"
-        //             >
-        //               Delete
-        //             </button>
-        //           </td>
-        //         </tr>
-        //       ))}
-        //     </tbody>
-        //   </table>
-        // </div>
       )}
 
       {showDeletePrompt && (
@@ -187,10 +209,7 @@ const DashboardPage = () => {
             </h2>
             <p className="mb-4">
               Product Name:{" "}
-              {
-                products.find((product) => product.id === deleteproductId)
-                  ?.product_name
-              }
+              {products.find((product) => product.id === deleteproductId)?.name}
             </p>
             <p className="mb-4">
               Quantity:{" "}

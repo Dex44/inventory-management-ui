@@ -12,7 +12,10 @@ const UserPage = () => {
   // Fetch users from API
   const getUsers = () => {
     axiosInstance
-      .get("/list-users/1/10")
+      .post("/list-users", {
+        page: 1,
+        limit: 100,
+      })
       .then((response) => {
         setUsers(response.data.data);
       })

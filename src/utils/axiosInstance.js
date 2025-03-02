@@ -1,8 +1,8 @@
 // src/utils/axiosInstance.js
 import axios from "axios";
 
-const BASE_URL = "http://35.154.209.48/api"; // Replace with your API's base URL
-// const BASE_URL = "http://localhost:3002/api"; // Replace with your API's base URL
+// const BASE_URL = "http://35.154.209.48/api"; // Replace with your API's base URL
+const BASE_URL = "http://localhost:3002/api"; // Replace with your API's base URL
 
 // Create Axios instance
 const axiosInstance = axios.create({

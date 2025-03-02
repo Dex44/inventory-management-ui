@@ -1,71 +1,267 @@
-import React, { useState } from "react";
-import { FaTrash, FaFilePdf } from "react-icons/fa";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
+import React, { useState, useEffect } from "react";
+import axiosInstance from "../utils/axiosInstance";
+import { FaTrash } from "react-icons/fa";
+import { useNavigate, useParams } from "react-router-dom";
 
 const CreateInvoice = () => {
-  const [items, setItems] = useState([]);
-  const [customer, setCustomer] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const { id: userId } = useParams();
+  const [clients, setClients] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedClient, setSelectedClient] = useState("");
+  const [invoiceProducts, setInvoiceProducts] = useState([]);
+  const currentDate = new Date().toLocaleDateString("en-GB");
+  const [role, setRole] = useState(null);
+  const [userData, setUserData] = useState(null);
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
 
-  const addItem = () => {
-    setItems([...items, { name: "", itemCode: "", description: "", quantity: "", price: "" }]);
+  const getClients = () => {
+    axiosInstance
+      .post("/list-clients", {
+        page: 1,
+        limit: 100,
+      })
+      .then((response) => {
+        setClients(response?.data?.data || []);
+      })
+      .catch((error) => {
+        console.error("Error fetching clients:", error);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
+  const getProducts = () => {
+    axiosInstance
+      .post("/list-products", {
+        page: 0,
+        limit: 0,
+      })
+      .then((response) => {
+        setProducts(response?.data?.data?.products || []);
+      })
+      .catch((error) => {
+        console.error("Error fetching products:", error);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
 
-  const updateItem = (index, field, value) => {
-    const updatedItems = [...items];
-    updatedItems[index][field] = value;
-    setItems(updatedItems);
+  useEffect(() => {
+    getClients();
+    getProducts();
+    const userData = JSON.parse(localStorage.getItem("userData"));
+    setUserData(userData);
+    setRole(userData.Role.role_name);
+    if (userId) {
+      setLoading(true);
+      axiosInstance
+        .get(`/get-invoice/${userId}`)
+        .then((response) => {
+          console.log("response", response);
+          
+          // setUsername(response.data.data.username);
+          // setEmail(response.data.data.email);
+          // setRole(response.data.data.role_id);
+        })
+        .catch(() => {
+          setError("Failed to fetch invoice details.");
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+  }, [userId]);
+
+  const addProduct = () => {
+    setInvoiceProducts([...invoiceProducts, { id: "", qty: 1, price: 0 }]);
   };
 
-  const removeItem = (index) => {
-    setItems(items.filter((_, i) => i !== index));
-  };
+  const handleProductChange = (index, productId) => {
+    const product = products.find((p) => p.product_id === parseInt(productId));
+    if (!product) return;
 
-  const calculateTotal = () => {
-    return items.reduce((total, item) => total + item.quantity * item.price, 0).toFixed(2);
-  };
-
-  const downloadPDF = () => {
-    const doc = new jsPDF();
-    doc.text("Invoice / Quotation", 20, 10);
-    doc.text(`Customer: ${customer}`, 20, 20);
-    doc.text(`Date: ${date}`, 20, 30);
-    
-    doc.autoTable({
-      startY: 40,
-      head: [["Name", "Item Code", "Description", "Quantity", "Price", "Total"]],
-      body: items.map(item => [item.name, item.itemCode, item.description, item.quantity, item.price, (item.quantity * item.price).toFixed(2)]),
+    setInvoiceProducts((prev) => {
+      const updatedProducts = [...prev];
+      updatedProducts[index] = {
+        id: product.product_id,
+        qty: 1,
+        price: product.price,
+      };
+      return updatedProducts;
     });
-    
-    doc.text(`Grand Total: $${calculateTotal()}`, 20, doc.autoTable.previous.finalY + 10);
-    doc.save("invoice.pdf");
+  };
+
+  const handleQtyChange = (index, qty) => {
+    setInvoiceProducts((prev) => {
+      const updatedProducts = [...prev];
+      updatedProducts[index].qty = qty;
+      return updatedProducts;
+    });
+  };
+
+  const handlePriceChange = (index, price) => {
+    setInvoiceProducts((prev) => {
+      const updatedProducts = [...prev];
+      updatedProducts[index].price = price;
+      return updatedProducts;
+    });
+  };
+
+  const deleteProduct = (index) => {
+    setInvoiceProducts((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const totalAmount = invoiceProducts
+    .reduce((acc, item) => acc + item.qty * item.price, 0)
+    .toFixed(2);
+
+  const handleSubmit = (is_approved) => {
+    if (!selectedClient) {
+      setError("Please select a client.");
+      return;
+    }
+    if (invoiceProducts.length === 0 || invoiceProducts.some((p) => !p.id)) {
+      setError("Please add at least one product with a valid selection.");
+      return;
+    }
+    setError("");
+    const InvoiceParams = {
+      created_by: +userData.user_id,
+      amount: +totalAmount,
+      client_id: +selectedClient,
+      is_approved: is_approved,
+      products: invoiceProducts.map((value) => {
+        return {
+          id: value.id,
+          quantity: value.qty,
+          price: value.price,
+        };
+      }),
+    };
+    if (is_approved) {
+      InvoiceParams.approved_by = +userData.user_id;
+    } else {
+      delete InvoiceParams.approved_by;
+    }
+    axiosInstance
+      .post("/create-invoice", InvoiceParams)
+      .then(() => {
+        navigate("/invoice");
+      })
+      .catch((error) => {
+        setError(error.response?.data?.message || "An error occurred.");
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
 
   return (
-    <div className="p-4 max-w-4xl mx-auto bg-white shadow-lg rounded-lg w-full md:w-3/4 lg:w-2/3 xl:w-1/2">
-      <h1 className="text-2xl font-bold mb-4 text-center">Create Invoice / Quotation</h1>
-      <label className="block font-semibold">Customer Name</label>
-      <input type="text" placeholder="Enter customer name" className="w-full p-2 border rounded mb-2" value={customer} onChange={(e) => setCustomer(e.target.value)} />
-      <label className="block font-semibold">Invoice Date</label>
-      <input type="date" className="w-full p-2 border rounded mb-4" value={date} onChange={(e) => setDate(e.target.value)} />
-      <div className="mb-4 flex justify-center">
-        <button onClick={addItem} className="bg-blue-500 text-white px-4 py-2 rounded">Add Item</button>
+    <div className="container mx-auto p-4 max-w-lg">
+      <h1 className="text-2xl font-bold mb-4">Create Invoice</h1>
+      {error && <p className="text-red-500 mb-2">{error}</p>}
+      <div className="mb-4">
+        <label className="block font-semibold">Select Client:</label>
+        <select
+          className="w-full p-2 border rounded"
+          value={selectedClient}
+          onChange={(e) => {
+            setSelectedClient(e.target.value);
+          }}
+        >
+          <option value="">Select Client</option>
+          {clients.map((client, index) => (
+            <option key={index} value={client.id}>
+              {client.name}
+            </option>
+          ))}
+        </select>
       </div>
-      {items.map((item, index) => (
-        <div key={index} className="grid grid-cols-1 md:grid-cols-6 gap-2 mb-2">
-          <input type="text" placeholder="Item Name" className="p-2 border rounded w-full" value={item.name} onChange={(e) => updateItem(index, "name", e.target.value)} />
-          <input type="text" placeholder="Item Code" className="p-2 border rounded w-full" value={item.itemCode} onChange={(e) => updateItem(index, "itemCode", e.target.value)} />
-          <input type="text" placeholder="Description" className="p-2 border rounded w-full" value={item.description} onChange={(e) => updateItem(index, "description", e.target.value)} />
-          <input type="text" placeholder="Qty" className="p-2 border rounded w-full" value={item.quantity} onChange={(e) => updateItem(index, "quantity", parseInt(e.target.value))} />
-          <input type="text" placeholder="Price" className="p-2 border rounded w-full" value={item.price} onChange={(e) => updateItem(index, "price", parseFloat(e.target.value))} />
-          <button onClick={() => removeItem(index)} className="text-red-500"><FaTrash /></button>
+      <p className="mb-4">Date: {currentDate}</p>
+      {selectedClient && (
+        <div>
+          <div className="flex justify-between">
+            <p className="mb-4">
+              Mobile No:{" "}
+              {clients.find((client) => client.id == selectedClient)?.mobile}
+            </p>
+            <p className="mb-4">
+              Email:{" "}
+              {clients.find((client) => client.id == selectedClient)?.email}
+            </p>
+          </div>
+          <p className="mb-4">
+            Address:{" "}
+            {clients.find((client) => client.id == selectedClient)?.address}
+          </p>
+        </div>
+      )}
+      <button
+        className="bg-blue-500 text-white p-2 rounded mb-4"
+        onClick={addProduct}
+      >
+        Add Product
+      </button>
+      {invoiceProducts.map((product, index) => (
+        <div key={index} className="border p-2 mb-2 rounded">
+          <select
+            value={product.id}
+            className="w-full p-2 border rounded mb-2"
+            onChange={(e) => handleProductChange(index, e.target.value)}
+          >
+            <option value="">Select Product</option>
+            {products.map((p) => (
+              <option key={p.product_id} value={p.product_id}>
+                {p.product_name}
+              </option>
+            ))}
+          </select>
+          <input
+            type="number"
+            className="w-full p-2 border rounded mb-2"
+            value={product.qty}
+            onChange={(e) => handleQtyChange(index, parseInt(e.target.value))}
+          />
+          <input
+            type="number"
+            disabled={role == "Staff"}
+            className="w-full p-2 border rounded mb-2"
+            value={product.price}
+            onChange={(e) =>
+              handlePriceChange(index, parseFloat(e.target.value))
+            }
+          />
+          <div className="flex justify-between">
+            <p className="font-semibold">
+              Total: ${(product.qty * product.price).toFixed(2)}
+            </p>
+            <button
+              onClick={() => deleteProduct(index)}
+              className="text-red-500"
+            >
+              <FaTrash />
+            </button>
+          </div>
         </div>
       ))}
-      <p className="text-right text-lg font-bold mt-4">Total: ${calculateTotal()}</p>
-      <div className="mt-4 flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 justify-center">
-        <button onClick={downloadPDF} className="bg-green-500 text-white px-4 py-2 rounded flex items-center justify-center w-full md:w-auto">
-          <FaFilePdf className="mr-2" /> Download PDF
+      <h2 className="text-xl font-bold mt-4">Total Amount: ${totalAmount}</h2>
+      <div className="flex justify-between gap-2">
+        <button
+          disabled={loading}
+          onClick={() => handleSubmit(false)}
+          className="bg-blue-500 text-white p-2 rounded w-full mt-4"
+        >
+          Send For Approval
+        </button>
+        <button
+          disabled={loading}
+          onClick={() => handleSubmit(true)}
+          className="bg-green-500 text-white p-2 rounded w-full mt-4"
+        >
+          Create Invoice
         </button>
       </div>
     </div>
