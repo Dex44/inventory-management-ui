@@ -7,7 +7,7 @@ import {
   Navigate,
 } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
-import DashboardPage from "./pages/DashboardPage";
+import DashboardPage from "./pages/Dashboard/DashboardPage";
 import UserPage from "./pages/UserPage";
 import ProductsPage from "./pages/ProductsPage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -88,6 +88,7 @@ function App() {
           <Route path="/products/edit/:id" element={<ProductFormPage />} />
           <Route path="/invoice" element={<InvoicePage />} />
           <Route path="/invoice/create" element={<CreateInvoice />} />
+          <Route path="/invoice/:pageType/:id" element={<CreateInvoice />} />
         </Route>
 
         {/* 404 Page */}

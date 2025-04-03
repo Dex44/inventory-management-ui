@@ -86,7 +86,7 @@ const ProductFormPage = () => {
           headers: { "Content-Type": "multipart/form-data" },
         });
       }
-      navigate("/dashboard");
+      navigate("/products");
     } catch (error) {
       setError(error.response?.data?.message || "An error occurred.");
     } finally {

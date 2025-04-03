@@ -17,7 +17,7 @@ const Navbar = () => {
   }, []);
 
   return (
-    <nav className="bg-gray-800 text-white fixed top-0 left-0 w-full z-50">
+    <nav className="bg-indigo-500 text-white fixed top-0 left-0 w-full z-50">
       <div className="mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -47,12 +47,12 @@ const Navbar = () => {
             >
               Clients
             </Link>
-            <Link
+            {/* <Link
               to="/invoice"
               className="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700"
             >
               Invoice
-            </Link>
+            </Link> */}
             {/* <Link
               to="/products"
               className="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700"
@@ -104,13 +104,13 @@ const Navbar = () => {
             >
               Clients
             </Link>
-            <Link
+            {/* <Link
               to="/invoice"
               className="block px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700"
               onClick={() => setIsMenuOpen(false)}
             >
               Invoice
-            </Link>
+            </Link> */}
             {/* <Link
               to="/products"
               className="block px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700"

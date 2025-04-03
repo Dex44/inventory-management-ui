@@ -8,6 +8,7 @@ const InvoicePage = () => {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showDeletePrompt, setShowDeletePrompt] = useState(false);
+  const [role, setRole] = useState(null);
 
   // Fetch invoices from API
   const getInvoices = () => {
@@ -28,6 +29,8 @@ const InvoicePage = () => {
       });
   };
   useEffect(() => {
+    const userData = JSON.parse(localStorage.getItem("userData"));
+    setRole(userData.Role.role_name);
     getInvoices();
   }, []);
 
@@ -73,29 +76,36 @@ const InvoicePage = () => {
                     <td className="px-4 py-2">
                       {FormatDate(invoice?.updated_at)}
                     </td>
-                    <td className="px-4 py-2">
-                      {invoice?.approver ? (
-                        <></>
-                      ) : (
-                        <>
+                    {role == "Admin" ? (
+                      <td className="px-4 py-2">
+                        {invoice?.approver ? (
                           <Link
-                            // to={`/products/edit/${product.id}`}
-                            className="text-blue-600"
+                            to={`/invoice/view/${invoice?.id}`}
+                            className="text-green-600"
                           >
-                            Edit
+                            View
                           </Link>
-                          <button
-                            // onClick={() => {
-                            //   setDeleteProductId(product.id);
-                            //   setShowDeletePrompt(true);
-                            // }}
-                            className="text-green-600 ml-4"
-                          >
-                            Approve
-                          </button>
-                        </>
-                      )}
-                    </td>
+                        ) : (
+                          <>
+                            <Link
+                              to={`/invoice/edit/${invoice?.id}`}
+                              className="text-blue-600"
+                            >
+                              Edit
+                            </Link>
+                          </>
+                        )}
+                      </td>
+                    ) : (
+                      <td className="px-4 py-2">
+                        <Link
+                          to={`/invoice/view/${invoice?.id}`}
+                          className="text-blue-600"
+                        >
+                          View Invoice
+                        </Link>
+                      </td>
+                    )}
                   </tr>
                 ))}
             </tbody>

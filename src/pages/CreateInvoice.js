@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, use } from "react";
 import axiosInstance from "../utils/axiosInstance";
 import { FaTrash } from "react-icons/fa";
 import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "react-toastify";
 
 const CreateInvoice = () => {
-  const { id: userId } = useParams();
+  const { id: userId, pageType } = useParams();
   const [clients, setClients] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -53,18 +54,22 @@ const CreateInvoice = () => {
     getClients();
     getProducts();
     const userData = JSON.parse(localStorage.getItem("userData"));
-    setUserData(userData);
     setRole(userData.Role.role_name);
+    setUserData(userData);
     if (userId) {
       setLoading(true);
       axiosInstance
         .get(`/get-invoice/${userId}`)
         .then((response) => {
-          console.log("response", response);
-          
-          // setUsername(response.data.data.username);
-          // setEmail(response.data.data.email);
-          // setRole(response.data.data.role_id);
+          const data = response.data.data;
+          setSelectedClient(data.client_id);
+          setInvoiceProducts([
+            ...data.products.map((data) => ({
+              id: data.id,
+              qty: data.quantity,
+              price: data.price,
+            })),
+          ]);
         })
         .catch(() => {
           setError("Failed to fetch invoice details.");
@@ -81,8 +86,14 @@ const CreateInvoice = () => {
 
   const handleProductChange = (index, productId) => {
     const product = products.find((p) => p.product_id === parseInt(productId));
-    if (!product) return;
+    console.log("selected product", product);
 
+    if (!product) return;
+    if (product.quantity < 1) {
+      console.log("Product is out of stock.", product);
+      toast.error("Product is out of stock.");
+      return;
+    }
     setInvoiceProducts((prev) => {
       const updatedProducts = [...prev];
       updatedProducts[index] = {
@@ -146,17 +157,34 @@ const CreateInvoice = () => {
     } else {
       delete InvoiceParams.approved_by;
     }
-    axiosInstance
-      .post("/create-invoice", InvoiceParams)
-      .then(() => {
-        navigate("/invoice");
-      })
-      .catch((error) => {
-        setError(error.response?.data?.message || "An error occurred.");
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    if (userId) {
+      InvoiceParams.id = userId;
+      delete InvoiceParams.created_by;
+      delete InvoiceParams.client_id;
+      axiosInstance
+        .post("/update-invoice", InvoiceParams)
+        .then(() => {
+          navigate("/invoice");
+        })
+        .catch((error) => {
+          setError(error.response?.data?.message || "An error occurred.");
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    } else {
+      axiosInstance
+        .post("/create-invoice", InvoiceParams)
+        .then(() => {
+          navigate("/invoice");
+        })
+        .catch((error) => {
+          setError(error.response?.data?.message || "An error occurred.");
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
   };
 
   return (
@@ -167,6 +195,7 @@ const CreateInvoice = () => {
         <label className="block font-semibold">Select Client:</label>
         <select
           className="w-full p-2 border rounded"
+          disabled={userId}
           value={selectedClient}
           onChange={(e) => {
             setSelectedClient(e.target.value);
@@ -199,15 +228,18 @@ const CreateInvoice = () => {
           </p>
         </div>
       )}
-      <button
-        className="bg-blue-500 text-white p-2 rounded mb-4"
-        onClick={addProduct}
-      >
-        Add Product
-      </button>
+      {!userId && (
+        <button
+          className="bg-blue-500 text-white p-2 rounded mb-4"
+          onClick={addProduct}
+        >
+          Add Product
+        </button>
+      )}
       {invoiceProducts.map((product, index) => (
         <div key={index} className="border p-2 mb-2 rounded">
           <select
+            disabled={userId}
             value={product.id}
             className="w-full p-2 border rounded mb-2"
             onChange={(e) => handleProductChange(index, e.target.value)}
@@ -221,6 +253,7 @@ const CreateInvoice = () => {
           </select>
           <input
             type="number"
+            disabled={userId}
             className="w-full p-2 border rounded mb-2"
             value={product.qty}
             onChange={(e) => handleQtyChange(index, parseInt(e.target.value))}
@@ -238,32 +271,39 @@ const CreateInvoice = () => {
             <p className="font-semibold">
               Total: ${(product.qty * product.price).toFixed(2)}
             </p>
-            <button
-              onClick={() => deleteProduct(index)}
-              className="text-red-500"
-            >
-              <FaTrash />
-            </button>
+
+            {pageType === "create" && (
+              <button
+                onClick={() => deleteProduct(index)}
+                className="text-red-500"
+              >
+                <FaTrash />
+              </button>
+            )}
           </div>
         </div>
       ))}
       <h2 className="text-xl font-bold mt-4">Total Amount: ${totalAmount}</h2>
-      <div className="flex justify-between gap-2">
-        <button
-          disabled={loading}
-          onClick={() => handleSubmit(false)}
-          className="bg-blue-500 text-white p-2 rounded w-full mt-4"
-        >
-          Send For Approval
-        </button>
-        <button
-          disabled={loading}
-          onClick={() => handleSubmit(true)}
-          className="bg-green-500 text-white p-2 rounded w-full mt-4"
-        >
-          Create Invoice
-        </button>
-      </div>
+      {(pageType === "create" || pageType === "edit") && (
+        <div className="flex justify-between gap-2">
+          {!userId && (
+            <button
+              disabled={loading}
+              onClick={() => handleSubmit(false)}
+              className="bg-blue-500 text-white p-2 rounded w-full mt-4"
+            >
+              Send For Approval
+            </button>
+          )}
+          <button
+            disabled={loading}
+            onClick={() => handleSubmit(true)}
+            className="bg-green-500 text-white p-2 rounded w-full mt-4"
+          >
+            Create Invoice
+          </button>
+        </div>
+      )}
     </div>
   );
 };
